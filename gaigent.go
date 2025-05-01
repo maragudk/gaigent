@@ -36,7 +36,7 @@ func (a *Agent) Run(ctx context.Context, getUserMessage func() (string, bool), o
 	readUserInput := true
 	for {
 		if readUserInput {
-			fmt.Fprint(out, "\u001b[94mYou\u001b[0m: ")
+			fmt.Fprint(out, "\u001b[95mYou\u001b[0m: ")
 			userInput, ok := getUserMessage()
 			if !ok {
 				break
