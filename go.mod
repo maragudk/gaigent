@@ -1,3 +1,3 @@
-module maragu.dev/template
+module maragu.dev/gaigent
 
 go 1.24
