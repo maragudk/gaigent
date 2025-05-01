@@ -5,10 +5,9 @@ import (
 	"context"
 	"log/slog"
 	"os"
-	"os/signal"
-	"syscall"
 
 	"maragu.dev/env"
+	anthropic "maragu.dev/gai-anthropic"
 
 	"maragu.dev/gaigent"
 )
@@ -24,12 +23,18 @@ func main() {
 func run(log *slog.Logger) error {
 	_ = env.Load(".env")
 
-	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGTERM, syscall.SIGINT)
-	defer stop()
-
-	agent := gaigent.NewAgent(gaigent.NewAgentOptions{
+	c := anthropic.NewClient(anthropic.NewClientOptions{
 		Key: env.GetStringOrDefault("ANTHROPIC_KEY", ""),
 		Log: log,
+	})
+
+	cc := c.NewChatCompleter(anthropic.NewChatCompleterOptions{
+		Model: anthropic.ChatCompleteModelClaude3_7SonnetLatest,
+	})
+
+	agent := gaigent.NewAgent(gaigent.NewAgentOptions{
+		ChatCompleter: cc,
+		Log:           log,
 	})
 
 	scanner := bufio.NewScanner(os.Stdin)
@@ -40,5 +45,5 @@ func run(log *slog.Logger) error {
 		return scanner.Text(), true
 	}
 
-	return agent.Run(ctx, getUserMessage, os.Stdout)
+	return agent.Run(context.Background(), getUserMessage, os.Stdout)
 }

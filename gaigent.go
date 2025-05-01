@@ -7,18 +7,16 @@ import (
 	"log/slog"
 
 	"maragu.dev/gai"
-	anthropic "maragu.dev/gai-anthropic"
 )
 
 type Agent struct {
-	c   *anthropic.Client
 	cc  gai.ChatCompleter
 	log *slog.Logger
 }
 
 type NewAgentOptions struct {
-	Key string
-	Log *slog.Logger
+	ChatCompleter gai.ChatCompleter
+	Log           *slog.Logger
 }
 
 func NewAgent(opts NewAgentOptions) *Agent {
@@ -26,18 +24,8 @@ func NewAgent(opts NewAgentOptions) *Agent {
 		opts.Log = slog.New(slog.DiscardHandler)
 	}
 
-	c := anthropic.NewClient(anthropic.NewClientOptions{
-		Key: opts.Key,
-		Log: opts.Log,
-	})
-
-	cc := c.NewChatCompleter(anthropic.NewChatCompleterOptions{
-		Model: anthropic.ChatCompleteModelClaude3_7SonnetLatest,
-	})
-
 	return &Agent{
-		c:   c,
-		cc:  cc,
+		cc:  opts.ChatCompleter,
 		log: opts.Log,
 	}
 }
