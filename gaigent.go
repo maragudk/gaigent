@@ -51,7 +51,7 @@ func (a *Agent) Run(ctx context.Context, getUserMessage func() (string, bool), o
 	readUserInput := true
 	for {
 		if readUserInput {
-			_, _ = fmt.Fprint(out, "\n\u001b[94mYou\u001b[0m: ")
+			_, _ = fmt.Fprint(out, "\n\u001b[1;94mMe\u001b[0m: ")
 			userInput, ok := getUserMessage()
 			if !ok {
 				break
@@ -80,21 +80,21 @@ func (a *Agent) Run(ctx context.Context, getUserMessage func() (string, bool), o
 			switch part.Type {
 			case gai.MessagePartTypeText:
 				if turn != "agent" {
-					_, _ = fmt.Fprint(out, "\n\u001b[93mAgent\u001b[0m: ")
+					_, _ = fmt.Fprint(out, "\n\u001b[1;92mGAI\u001b[0m: ")
 					turn = "agent"
 				}
 				_, _ = fmt.Fprint(out, part.Text())
 
 			case gai.MessagePartTypeToolCall:
 				if turn != "tool" {
-					_, _ = fmt.Fprint(out, "\n\u001b[33mTool\u001b[0m: ")
+					_, _ = fmt.Fprint(out, "\n\u001b[0;32mTool\u001b[0m: ")
 					turn = "tool"
 				}
 				toolCall := part.ToolCall()
 
 				for _, tool := range tools {
 					if tool.Name == toolCall.Name {
-						_, _ = fmt.Fprintf(out, "%v(%v)", toolCall.Name, string(toolCall.Args))
+						_, _ = fmt.Fprintf(out, "\u001b[1;37m%v\u001b[0m(%v)", toolCall.Name, string(toolCall.Args))
 						result, err := tool.Function(ctx, toolCall.Args)
 						toolResult = gai.ToolResult{
 							ID:      toolCall.ID,
