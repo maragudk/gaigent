@@ -6,6 +6,7 @@ import (
 	"io"
 	"log/slog"
 	"os"
+	"time"
 
 	"maragu.dev/gai"
 	"maragu.dev/gai/tools"
@@ -44,6 +45,7 @@ func (a *Agent) Run(ctx context.Context, getUserMessage func() (string, bool), o
 	tools := []gai.Tool{
 		tools.NewReadFile(rootFS),
 		tools.NewListDir(rootFS),
+		tools.NewGetTime(time.Now),
 	}
 
 	readUserInput := true
