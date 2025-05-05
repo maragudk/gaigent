@@ -5,8 +5,10 @@ import (
 	"fmt"
 	"io"
 	"log/slog"
+	"os"
 
 	"maragu.dev/gai"
+	"maragu.dev/gai/tools"
 )
 
 type Agent struct {
@@ -33,10 +35,21 @@ func NewAgent(opts NewAgentOptions) *Agent {
 func (a *Agent) Run(ctx context.Context, getUserMessage func() (string, bool), out io.Writer) error {
 	var conversation []gai.Message
 
+	root, err := os.OpenRoot(".")
+	if err != nil {
+		return err
+	}
+	rootFS := root.FS()
+
+	tools := []gai.Tool{
+		tools.NewReadFile(rootFS),
+		tools.NewListDir(rootFS),
+	}
+
 	readUserInput := true
 	for {
 		if readUserInput {
-			fmt.Fprint(out, "\u001b[95mYou\u001b[0m: ")
+			fmt.Fprint(out, "\n\u001b[94mYou\u001b[0m: ")
 			userInput, ok := getUserMessage()
 			if !ok {
 				break
@@ -48,13 +61,15 @@ func (a *Agent) Run(ctx context.Context, getUserMessage func() (string, bool), o
 
 		res, err := a.cc.ChatComplete(ctx, gai.ChatCompleteRequest{
 			Messages: conversation,
+			Tools:    tools,
 		})
 		if err != nil {
 			return err
 		}
 
-		fmt.Fprint(out, "\u001b[93mAgent\u001b[0m: ")
+		var turn string
 		var parts []gai.MessagePart
+		var toolResult gai.ToolResult
 		for part, err := range res.Parts() {
 			if err != nil {
 				return err
@@ -62,19 +77,51 @@ func (a *Agent) Run(ctx context.Context, getUserMessage func() (string, bool), o
 
 			switch part.Type {
 			case gai.MessagePartTypeText:
+				if turn != "agent" {
+					fmt.Fprint(out, "\n\u001b[93mAgent\u001b[0m: ")
+					turn = "agent"
+				}
 				fmt.Fprint(out, part.Text())
+
+			case gai.MessagePartTypeToolCall:
+				if turn != "tool" {
+					fmt.Fprint(out, "\n\u001b[33mTool\u001b[0m: ")
+					turn = "tool"
+				}
+				toolCall := part.ToolCall()
+
+				for _, tool := range tools {
+					if tool.Name == toolCall.Name {
+						fmt.Fprintf(out, "%v(%v)", toolCall.Name, string(toolCall.Args))
+						result, err := tool.Function(ctx, toolCall.Args)
+						toolResult = gai.ToolResult{
+							ID:      toolCall.ID,
+							Content: result,
+							Err:     err,
+						}
+						break
+					}
+				}
 			default:
 				panic(fmt.Sprintf("unknown message part type: %v", part.Type))
 			}
 
 			parts = append(parts, part)
 		}
-		fmt.Fprintln(out)
 
 		conversation = append(conversation, gai.Message{
 			Role:  gai.MessageRoleAssistant,
 			Parts: parts,
 		})
+
+		if toolResult.ID != "" {
+			conversation = append(conversation, gai.NewUserToolResultMessage(toolResult))
+			readUserInput = false
+			continue
+		}
+
+		fmt.Fprintln(out)
+		readUserInput = true
 	}
 
 	return nil
