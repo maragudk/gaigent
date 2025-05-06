@@ -2,10 +2,13 @@ package gaigent
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"log/slog"
 	"os"
+	"slices"
+	"strings"
 	"time"
 
 	"maragu.dev/gai"
@@ -42,10 +45,16 @@ func (a *Agent) Run(ctx context.Context, getUserMessage func() (string, bool), o
 	}
 
 	tools := []gai.Tool{
-		tools.NewReadFile(root),
 		tools.NewEditFile(root),
-		tools.NewListDir(root),
 		tools.NewGetTime(time.Now),
+		tools.NewListDir(root),
+		tools.NewReadFile(root),
+	}
+
+	allowedTools := []string{
+		"get_time",
+		"list_dir",
+		"read_file",
 	}
 
 	readUserInput := true
@@ -95,11 +104,34 @@ func (a *Agent) Run(ctx context.Context, getUserMessage func() (string, bool), o
 				for _, tool := range tools {
 					if tool.Name == toolCall.Name {
 						_, _ = fmt.Fprintf(out, "\u001b[1;37m%v\u001b[0m(%v)", toolCall.Name, string(toolCall.Args))
-						result, err := tool.Function(ctx, toolCall.Args)
-						toolResult = gai.ToolResult{
-							ID:      toolCall.ID,
-							Content: result,
-							Err:     err,
+
+						msg := "y"
+						if !slices.Contains(allowedTools, tool.Name) {
+							_, _ = fmt.Fprintf(out, "\nAllow [y/n/a]?: ")
+							var ok bool
+							msg, ok = getUserMessage()
+							if !ok {
+								return nil
+							}
+						}
+
+						switch msg := strings.ToLower(msg); msg {
+						case "y", "yes", "a", "all":
+							if msg == "a" || msg == "all" {
+								allowedTools = append(allowedTools, tool.Name)
+							}
+
+							result, err := tool.Function(ctx, toolCall.Args)
+							toolResult = gai.ToolResult{
+								ID:      toolCall.ID,
+								Content: result,
+								Err:     err,
+							}
+						case "n", "no":
+							toolResult = gai.ToolResult{
+								ID:  toolCall.ID,
+								Err: errors.New("tool call denied"),
+							}
 						}
 						break
 					}
