@@ -4,7 +4,7 @@ go 1.24
 
 require (
 	maragu.dev/env v0.2.0
-	maragu.dev/gai v0.0.0-20250505092725-b98c29410a55
+	maragu.dev/gai v0.0.0-20250506085238-ba5af303adcd
 	maragu.dev/gai-anthropic v0.0.0-20250505095845-9398fb463720
 )
 

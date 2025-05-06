@@ -40,11 +40,11 @@ func (a *Agent) Run(ctx context.Context, getUserMessage func() (string, bool), o
 	if err != nil {
 		return err
 	}
-	rootFS := root.FS()
 
 	tools := []gai.Tool{
-		tools.NewReadFile(rootFS),
-		tools.NewListDir(rootFS),
+		tools.NewReadFile(root),
+		tools.NewEditFile(root),
+		tools.NewListDir(root),
 		tools.NewGetTime(time.Now),
 	}
 
