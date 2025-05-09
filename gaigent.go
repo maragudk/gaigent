@@ -2,6 +2,7 @@ package gaigent
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -44,17 +45,23 @@ func (a *Agent) Run(ctx context.Context, getUserMessage func() (string, bool), o
 		return err
 	}
 
+	db := &memoriesDB{}
+
 	tools := []gai.Tool{
 		tools.NewEditFile(root),
+		tools.NewGetMemories(db),
 		tools.NewGetTime(time.Now),
 		tools.NewListDir(root),
 		tools.NewReadFile(root),
+		tools.NewSaveMemory(db),
 	}
 
 	allowedTools := []string{
+		"get_memories",
 		"get_time",
 		"list_dir",
 		"read_file",
+		"save_memory",
 	}
 
 	readUserInput := true
@@ -72,6 +79,7 @@ func (a *Agent) Run(ctx context.Context, getUserMessage func() (string, bool), o
 
 		res, err := a.cc.ChatComplete(ctx, gai.ChatCompleteRequest{
 			Messages: conversation,
+			System:   gai.Ptr("You are an assistant called GAI. You respond to user requests and use tools to complete tasks. Don't mention what tools you have available, just use them."),
 			Tools:    tools,
 		})
 		if err != nil {
@@ -159,4 +167,32 @@ func (a *Agent) Run(ctx context.Context, getUserMessage func() (string, bool), o
 	}
 
 	return nil
+}
+
+type memoriesDB struct {
+}
+
+func (m *memoriesDB) GetMemories(ctx context.Context) ([]string, error) {
+	var memories []string
+	data, err := os.ReadFile("memory.json")
+	if err != nil {
+		return nil, err
+	}
+	if err := json.Unmarshal(data, &memories); err != nil {
+		return nil, err
+	}
+	return memories, nil
+}
+
+func (m *memoriesDB) SaveMemory(ctx context.Context, memory string) error {
+	memories, err := m.GetMemories(ctx)
+	if err != nil {
+		return err
+	}
+	memories = append(memories, memory)
+	data, err := json.Marshal(memories)
+	if err != nil {
+		return err
+	}
+	return os.WriteFile("memory.json", data, 0644)
 }
