@@ -54,9 +54,11 @@ func (a *Agent) Run(ctx context.Context, getUserMessage func() (string, bool), o
 		tools.NewListDir(root),
 		tools.NewReadFile(root),
 		tools.NewSaveMemory(db),
+		tools.NewFetch(nil),
 	}
 
 	allowedTools := []string{
+		"fetch",
 		"get_memories",
 		"get_time",
 		"list_dir",
@@ -79,7 +81,7 @@ func (a *Agent) Run(ctx context.Context, getUserMessage func() (string, bool), o
 
 		res, err := a.cc.ChatComplete(ctx, gai.ChatCompleteRequest{
 			Messages: conversation,
-			System:   gai.Ptr("You are an assistant called GAI. You respond to user requests and use tools to complete tasks. Don't mention what tools you have available, just use them."),
+			System:   gai.Ptr("You are an assistant called GAI (pronounced guy). You respond to user requests and use tools to complete tasks. You MUST not mention what tools you have available, just use them when appropriate."),
 			Tools:    tools,
 		})
 		if err != nil {
@@ -152,7 +154,7 @@ func (a *Agent) Run(ctx context.Context, getUserMessage func() (string, bool), o
 		}
 
 		conversation = append(conversation, gai.Message{
-			Role:  gai.MessageRoleAssistant,
+			Role:  gai.MessageRoleModel,
 			Parts: parts,
 		})
 
