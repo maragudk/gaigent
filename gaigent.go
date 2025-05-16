@@ -55,6 +55,7 @@ func (a *Agent) Run(ctx context.Context, getUserMessage func() (string, bool), o
 		tools.NewReadFile(root),
 		tools.NewSaveMemory(db),
 		tools.NewFetch(nil),
+		tools.NewExec(),
 	}
 
 	allowedTools := []string{
